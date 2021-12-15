@@ -501,6 +501,9 @@ class Init(InsertPostInitMethodToModuleSubClasses):
         # If we are provided an already-allocated module to prepare.
         if module is not None:
             assert isinstance(module, torch.nn.Module)
+
+            torch.nn.utils.meta_init.materialize_module(module, buffers_only=True)
+
             self._convert_to_zero_parameters(module.parameters(recurse=True))
 
         self.use_all_gather_base = False
@@ -798,7 +801,9 @@ class Init(InsertPostInitMethodToModuleSubClasses):
             start = partition_size * self.rank
             end = start + partition_size
 
-            one_dim_param = param.contiguous().view(-1)
+            materialized_param = torch.nn.utils.meta_init.materialize_tensor(param)
+
+            one_dim_param = materialized_param.contiguous().view(-1)
 
             if start < param.ds_numel and end <= param.ds_numel:
                 src_tensor = one_dim_param.narrow(0, start, partition_size)
